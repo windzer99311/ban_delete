@@ -1,0 +1,129 @@
+[
+  {
+    "domain": ".aternos.org",
+    "name": "cto_bundle",
+    "path": "/",
+    "secure": false,
+    "value": "NWWXX19aWlphT3JmVFZBRCUyQmhCaCUyQktOWUc3MHlDbHhNNUhjWkM2VHFiQm5kbUJ6N3Rnb0trMzVQWWxITVBTV3lXYlZvS0VVT2dPcXhHd0NaY0FFaHlDZVR6U09PWUdySFNaZGZ1QThNOHlxQnJ0aGthNEZnclZyVUo2RTJzY08yamJtcTVBTiUyRnZhb01PVmJNenA3SVB0QnJwNHclM0QlM0Q",
+    "expires": 1784392122
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "FCNEC",
+    "path": "/",
+    "secure": false,
+    "value": "%5B%5B%22AKsRol_zrnj3OzDjxyJ6aZhT_I3bqKlg0l1sP2C9WXWa_7N4rs_7cNV0jFaC74Jm8ItTwy3mQ2V8NPzg2N3tFcFnC7cJFBoxrT3aGhbCL2MGLDro2wU_J0YLEcL4KD5QHJ0LZtZI7-SjqrtUz4UokuMFOwRPS1Wvlg%3D%3D%22%5D%5D",
+    "expires": 1782232122
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_pubcid_cst",
+    "path": "/",
+    "secure": false,
+    "value": "yyzLLLEsNg%3D%3D",
+    "expires": 1782232118
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_pubcid",
+    "path": "/",
+    "secure": false,
+    "value": "e696e057-65e5-4f93-afc3-2e531d27c2c0",
+    "expires": 1782232118
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "__gads",
+    "path": "/",
+    "secure": true,
+    "value": "ID=214c5a3a535ef32d:T=1750696117:RT=1750696117:S=ALNI_MaRdKV-Z923zdFRefJVY-wxFJPF_Q",
+    "expires": 1784392117
+  },
+  {
+    "domain": "aternos.org",
+    "name": "ATERNOS_GOTO",
+    "path": "/",
+    "secure": false,
+    "value": "L3BsYXllcnMvYmFubmVkLXBsYXllcnM%3D"
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "__gpi",
+    "path": "/",
+    "secure": true,
+    "value": "UID=000011382fb7cbf9:T=1750696117:RT=1750696117:S=ALNI_MalGXz09WdYUfi4SJltsHhPPOhEuA",
+    "expires": 1784392117
+  },
+  {
+    "domain": "aternos.org",
+    "name": "_lr_env_src_ats",
+    "path": "/",
+    "secure": false,
+    "value": "false",
+    "expires": 1753288112
+  },
+  {
+    "domain": "aternos.org",
+    "name": "_lr_retry_request",
+    "path": "/",
+    "secure": false,
+    "value": "true",
+    "expires": 1750699712
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_sharedid_cst",
+    "path": "/",
+    "secure": false,
+    "value": "zix7LPQsHA%3D%3D",
+    "expires": 1782232112
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_sharedid",
+    "path": "/",
+    "secure": false,
+    "value": "97e264a6-0ddb-4aa8-bdff-8a326f567e8b",
+    "expires": 1782232112
+  },
+  {
+    "domain": "aternos.org",
+    "name": "ATERNOS_SESSION",
+    "path": "/",
+    "secure": false,
+    "value": "KuJ6EWXSIc8nSA6508Xwa4BBaXJGKX60waJr7Ma0S88Gkfb5DQ1rKc000EMwWHpH5iqyKKTG3v0fk6OSEQceWPDGZuUgIFH0HFft",
+    "expires": 1753288109
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_ga_70M94GH0FD",
+    "path": "/",
+    "secure": false,
+    "value": "GS2.1.s1750696087$o1$g1$t1750696110$j37$l0$h0",
+    "expires": 1785256110
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "_ga",
+    "path": "/",
+    "secure": false,
+    "value": "GA1.1.442509534.1750696088",
+    "expires": 1785256110
+  },
+  {
+    "domain": ".aternos.org",
+    "name": "__eoi",
+    "path": "/",
+    "secure": true,
+    "value": "ID=1b79b8b050d2b8d2:T=1750696117:RT=1750696117:S=AA-AfjZlCUrO_5OBT8piAFwceZk_",
+    "expires": 1766248117
+  },
+  {
+    "domain": "aternos.org",
+    "name": "ATERNOS_LANGUAGE",
+    "path": "/",
+    "secure": false,
+    "value": "en",
+    "expires": 1785256083
+  }
+]
