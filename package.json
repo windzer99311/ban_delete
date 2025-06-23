@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer": "1.7.0",
     "fs": "^0.0.1-security",
     "puppeteer-extra": "^3.3.4",
     "puppeteer-extra-plugin-stealth": "^2.11.1"
