@@ -1,18 +1,36 @@
+// server.js
+const express = require('express');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
 puppeteer.use(StealthPlugin());
 
+// Config
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
 const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
-// --- Log function
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.static('.'));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/logs', (req, res) => {
+  if (fs.existsSync(LOG_FILE)) {
+    res.send(fs.readFileSync(LOG_FILE, 'utf-8'));
+  } else {
+    res.send('No log yet.');
+  }
+});
+
 function log(message) {
   const timestamp = new Date().toISOString();
   const msg = `${timestamp} — ${message}`;
@@ -20,12 +38,10 @@ function log(message) {
   fs.appendFileSync(LOG_FILE, msg + '\n');
 }
 
-// --- Delay helper
-function delay(ms) {
+async function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// --- Puppeteer bot
 async function runBot() {
   if (!fs.existsSync(COOKIE_FILE)) {
     log("❌ No cookies found. Please run save_session.js first.");
@@ -34,7 +50,14 @@ async function runBot() {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    executablePath: '/usr/bin/google-chrome',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1920,1080'
+    ]
   });
 
   const page = await browser.newPage();
@@ -83,7 +106,6 @@ async function runBot() {
       log(`⏳ Waiting ${LOOP_DELAY / 1000} seconds before next check...`);
       await delay(LOOP_DELAY);
     }
-
   } catch (err) {
     log(`❌ Error: ${err.message}`);
   }
@@ -91,48 +113,8 @@ async function runBot() {
   await browser.close();
 }
 
-// --- GUI server
-const app = express();
-const PORT = 3000;
+runBot();
 
-app.get('/', (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Log Viewer</title>
-  <style>
-    body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
-    h1 { color: #58a6ff; }
-    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
-  </style>
-</head>
-<body>
-  <h1>📝 Ban Deleter Logs</h1>
-  <pre id="logs">Loading...</pre>
-  <script>
-    async function fetchLogs() {
-      const res = await fetch('/logs');
-      const text = await res.text();
-      document.getElementById('logs').textContent = text;
-    }
-    fetchLogs();
-    setInterval(fetchLogs, 2000);
-  </script>
-</body>
-</html>
-  `);
-});
-
-app.get('/logs', (req, res) => {
-  fs.readFile(LOG_FILE, 'utf-8', (err, data) => {
-    if (err) return res.send('Error reading log.');
-    res.send(data);
-  });
-});
-
-// Start GUI and bot
 app.listen(PORT, () => {
   console.log(`🌐 GUI running: http://localhost:${PORT}`);
-  runBot(); // start the bot after server
 });
