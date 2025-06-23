@@ -1,14 +1,13 @@
-#!/bin/bash
-
-# This script installs full Chrome to ensure headless browser is available on Render
+#!/usr/bin/env bash
 set -e
 
-echo "Installing Chrome..."
-apt-get update
-apt-get install -y wget unzip gnupg2
+# 1. Install dependencies
+npm install
 
-wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-apt-get install -y ./google-chrome-stable_current_amd64.deb
-rm google-chrome-stable_current_amd64.deb
+# 2. Install Chromium for Puppeteer
+npx puppeteer browsers install chrome
 
-echo "Chrome installed."
+# 3. Cache Chromium binary across builds
+PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer
+mkdir -p "$PUPPETEER_CACHE_DIR"
+cp -R /opt/render/project/src/.cache/puppeteer/chrome/* "$PUPPETEER_CACHE_DIR" || true
