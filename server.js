@@ -6,6 +6,7 @@ const path = require('path');
 
 puppeteer.use(StealthPlugin());
 
+
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
 const LOGIN_URL = 'https://aternos.org/players/banned-players';
@@ -55,7 +56,7 @@ async function runBot() {
   try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
     const selector = `div.servercard.offline[title="${PLAYER_NAME}"]`;
-    await page.waitForSelector(selector, { timeout: 15000 });
+    await page.waitForSelector(selector, { timeout: 30000 });
     await page.click(selector);
     log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
 
