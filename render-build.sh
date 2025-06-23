@@ -1,23 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Exit if any command fails
+# This script installs full Chrome to ensure headless browser is available on Render
 set -e
 
-# Install Google Chrome manually
-echo "Installing Google Chrome..."
+echo "Installing Chrome..."
 apt-get update
-apt-get install -y wget gnupg ca-certificates
+apt-get install -y wget unzip gnupg2
 
-wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
-    > /etc/apt/sources.list.d/google-chrome.list
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+apt-get install -y ./google-chrome-stable_current_amd64.deb
+rm google-chrome-stable_current_amd64.deb
 
-apt-get update
-apt-get install -y google-chrome-stable
-
-# Ensure Chrome is available
-google-chrome --version
-
-# Install Node dependencies
-echo "Installing Node modules..."
-npm install
+echo "Chrome installed."
