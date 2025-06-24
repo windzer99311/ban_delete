@@ -155,3 +155,4 @@ app.listen(PORT, () => {
   console.log(`🌐 GUI running: http://localhost:${PORT}`);
   runBot(); // start the bot after server
 });
+
