@@ -74,7 +74,7 @@ async function runBot() {
   try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
     const selector = `div.servercard.offline[title="${PLAYER_NAME}"]`;
-    await page.waitForSelector(selector, { timeout: 15000 });
+    await page.waitForSelector(selector, { timeout: 60000 });
     await page.click(selector);
     log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
 
