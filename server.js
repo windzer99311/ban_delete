@@ -16,9 +16,9 @@ const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
 // Proxy settings
-const PROXY = '104.219.171.245:50100'; // Replace with your proxy IP:port
-const PROXY_USERNAME = 'jEbmhvXJ';           // Optional
-const PROXY_PASSWORD = 'NlHqLB1hCG';           // Optional
+const PROXY = '192.168.1.13:808'; // Replace with your proxy IP:port
+const PROXY_USERNAME = 'User-123';           // Optional
+const PROXY_PASSWORD = '1234';           // Optional
 
 // --- Log function
 function log(message) {
