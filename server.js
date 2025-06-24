@@ -1,10 +1,12 @@
-const puppeteer = require('puppeteer-extra');
+const puppeteer = require('puppeteer');
+const puppeteerExtra = require('puppeteer-extra');
+puppeteerExtra.puppeteer = puppeteer;
+
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 
-puppeteer.use(StealthPlugin());
+puppeteerExtra.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
@@ -29,12 +31,27 @@ async function runBot() {
     return;
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  const browser = await puppeteerExtra.launch({
+    headless: "new", // <-- IMPORTANT
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--window-size=1366,768'
+    ]
   });
 
   const page = await browser.newPage();
+
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+  );
+  await page.setViewport({ width: 1366, height: 768 });
+  await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+  });
+
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
   await page.goto('https://aternos.org', { waitUntil: 'domcontentloaded' });
   for (const cookie of cookies) {
@@ -58,8 +75,8 @@ async function runBot() {
     while (true) {
       await delay(1000);
       await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-      const buttons = await page.$$('div.js-remove-from-list');
 
+      const buttons = await page.$$('div.js-remove-from-list');
       if (buttons.length === 0) {
         log("✅ No delete buttons found.");
       } else {
@@ -85,6 +102,7 @@ async function runBot() {
   await browser.close();
 }
 
+// ------------------- GUI Server -------------------
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -93,11 +111,11 @@ app.get('/', (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Log Viewer</title>
+  <title>Ban Deleter Logs</title>
   <style>
     body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
     h1 { color: #58a6ff; }
-    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
+    pre { white-space: pre-wrap; background: #111; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -124,7 +142,7 @@ app.get('/logs', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 GUI running: http://localhost:${PORT}`);
   runBot();
 });
