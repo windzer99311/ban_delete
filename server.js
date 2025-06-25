@@ -11,9 +11,9 @@ const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
-const proxyIP = '78.47.219.204:3128'; // Replace with your proxy
-const proxyUsername = '';              // Optional
-const proxyPassword = '';
+const proxyIP = '192.168.1.4:808'; // Replace with your proxy
+const proxyUsername = 'User-001';              // Optional
+const proxyPassword = '1234';
 
 
 function log(message) {
@@ -35,7 +35,8 @@ async function runBot() {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox',`--proxy-server=${proxyIP}`]
+    args: ['--no-sandbox', '--disable-setuid-sandbox',`--proxy-server=${proxyIP}`
+    ]
   });
 
   const page = await browser.newPage();
@@ -57,10 +58,10 @@ async function runBot() {
 
   await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
   await delay(5000);
-
+  while (true){
   try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
-    const selector = `div.servercard.offline[title="${PLAYER_NAME}"]`;
+    const selector = `[title="${PLAYER_NAME}"]`;
     await page.waitForSelector(selector, { timeout: 15000 });
     await page.click(selector);
     log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
@@ -92,8 +93,34 @@ async function runBot() {
     }
 
   } catch (err) {
-    log(`❌ Error: ${err.message}`);
-  }
+    log('trying in error cath method!');
+    while (true) {
+      await delay(1000);
+      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+
+      // ✅ FIXED SELECTOR HERE
+      const buttons = await page.$$('button.js-remove');
+
+      if (buttons.length === 0) {
+        log("✅ No delete buttons found.");
+      } else {
+        log(`🔘 Found ${buttons.length} delete button(s)...`);
+        for (const btn of buttons) {
+          try {
+            await btn.click();
+            log("🗑️ Clicked one delete button.");
+            await delay(1000);
+          } catch (e) {
+            log(`⚠️ Skip a button: ${e.message}`);
+          }
+        }
+      }
+
+      log(`⏳ Waiting ${LOOP_DELAY / 1000} seconds before next check...`);
+      await delay(LOOP_DELAY);
+    }
+
+  }}
 
   await browser.close();
 }
