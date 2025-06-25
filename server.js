@@ -47,7 +47,7 @@ async function runBot() {
   }
 
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.goto('https://aternos.org', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aternos.org/players/banned-players', { waitUntil: 'domcontentloaded' });
   for (const cookie of cookies) {
     try {
       await page.setCookie(cookie);
