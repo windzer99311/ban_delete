@@ -1,144 +1,121 @@
+const express = require('express');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const express = require('express');
 const fs = require('fs');
+const path = require('path');
 
 puppeteer.use(StealthPlugin());
 
-const COOKIE_FILE = 'cookies.json';
-const LOG_FILE = 'log.txt';
-const LOGIN_URL = 'https://aternos.org/players/banned-players';
-const PLAYER_NAME = 'KARBAN2923-JmVS';
-const LOOP_DELAY = 10000;
+const app = express();
+const PORT = 3000;
 
+const LOG_FILE = path.join(__dirname, 'logs.txt');
+const HTML_FILE = path.join(__dirname, 'page.html');
+
+// Proxy config
 const proxyIP = '23.237.210.82:80'; // Replace with your proxy
 const proxyUsername = '';              // Optional
-const proxyPassword = '';
+const proxyPassword = '';              // Optional
 
-
-function log(message) {
+// Logging helper
+function log(text) {
   const timestamp = new Date().toISOString();
-  const msg = `${timestamp} — ${message}`;
-  console.log(msg);
-  fs.appendFileSync(LOG_FILE, msg + '\n');
+  const entry = `[${timestamp}] ${text}\n`;
+  fs.appendFileSync(LOG_FILE, entry);
+  console.log(entry);
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
+// Bot
 async function runBot() {
-  if (!fs.existsSync(COOKIE_FILE)) {
-    log("❌ No cookies found. Please run save_session.js first.");
-    return;
-  }
-
+  log('🌐 Launching browser with proxy...');
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox',`--proxy-server=${proxyIP}`]
+    args: [`--proxy-server=${proxyIP}`],
   });
 
   const page = await browser.newPage();
 
   if (proxyUsername && proxyPassword) {
-  await page.authenticate({ username: proxyUsername, password: proxyPassword });
-  log('🔐 Proxy authenticated.');
+    await page.authenticate({ username: proxyUsername, password: proxyPassword });
+    log('🔐 Proxy authenticated.');
   }
-
-  const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.goto('https://aternos.org', { waitUntil: 'networkidle2' });
-  for (const cookie of cookies) {
-    try {
-      await page.setCookie(cookie);
-    } catch (e) {
-      log(`⚠️ Failed to set cookie: ${e.message}`);
-    }
-  }
-
-  await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
-  await delay(5000);
 
   try {
-    log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
-    const selector = `div.servercard.offline[title="${PLAYER_NAME}"]`;
-    await page.waitForSelector(selector, { timeout: 15000 });
-    await page.click(selector);
-    log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
+    await page.goto('https://aternos.org/:en/', { waitUntil: 'networkidle2' });
+    log('✅ Page loaded.');
 
-    while (true) {
-      await delay(1000);
-      await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
-
-      // ✅ FIXED SELECTOR HERE
-      const buttons = await page.$$('button.js-remove');
-
-      if (buttons.length === 0) {
-        log("✅ No delete buttons found.");
-      } else {
-        log(`🔘 Found ${buttons.length} delete button(s)...`);
-        for (const btn of buttons) {
-          try {
-            await btn.click();
-            log("🗑️ Clicked one delete button.");
-            await delay(1000);
-          } catch (e) {
-            log(`⚠️ Skip a button: ${e.message}`);
-          }
-        }
-      }
-
-      log(`⏳ Waiting ${LOOP_DELAY / 1000} seconds before next check...`);
-      await delay(LOOP_DELAY);
-    }
-
+    const html = await page.content();
+    console.log(`${html}`)
+    fs.writeFileSync(HTML_FILE, html);
+    log('📝 HTML saved to page.html');
   } catch (err) {
     log(`❌ Error: ${err.message}`);
   }
 
   await browser.close();
+  log('🛑 Browser closed.');
 }
 
-// --- GUI server
-const app = express();
-const PORT = 3000;
-
+// GUI
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Log Viewer</title>
+  <title>Puppeteer Dashboard</title>
   <style>
-    body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
+    body { font-family: sans-serif; background: #1e1e2f; color: #eee; padding: 1rem; }
     h1 { color: #58a6ff; }
+    nav { margin-bottom: 1rem; }
+    button { margin-right: 1rem; padding: 0.5rem 1rem; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
     pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <h1>📝 Ban Deleter Logs</h1>
-  <pre id="logs">Loading...</pre>
+  <h1>🧭 Puppeteer Proxy Dashboard</h1>
+  <nav>
+    <button onclick="showLogs()">📝 Logs</button>
+    <button onclick="showHTML()">🧾 HTML</button>
+    <button onclick="location.reload()">🔁 Refresh</button>
+  </nav>
+  <pre id="output">Loading...</pre>
+
   <script>
-    async function fetchLogs() {
+    async function showLogs() {
       const res = await fetch('/logs');
-      const text = await res.text();
-      document.getElementById('logs').textContent = text;
+      document.getElementById('output').textContent = await res.text();
     }
-    fetchLogs();
-    setInterval(fetchLogs, 2000);
+
+    async function showHTML() {
+      const res = await fetch('/html');
+      document.getElementById('output').textContent = await res.text();
+    }
+
+    // Load logs by default
+    showLogs();
   </script>
 </body>
 </html>
   `);
 });
 
+// Endpoints
 app.get('/logs', (req, res) => {
-  fs.readFile(LOG_FILE, 'utf-8', (err, data) => {
-    if (err) return res.send('Error reading log.');
-    res.send(data);
-  });
+  if (fs.existsSync(LOG_FILE)) res.send(fs.readFileSync(LOG_FILE, 'utf8'));
+  else res.send('No logs yet.');
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 GUI running: http://localhost:${PORT}`);
-  runBot();
+app.get('/html', (req, res) => {
+  if (fs.existsSync(HTML_FILE)) res.send(fs.readFileSync(HTML_FILE, 'utf8'));
+  else res.send('No HTML captured yet.');
 });
+
+// Start
+app.listen(PORT, () => {
+  console.log(`🌐 GUI running at http://localhost:${PORT}`);
+  runBot(); // Run bot after server starts
+});
+login="jEbmhvXJ"
+password="NlHqLB1hCG"
+port="50100"
+ip="104.219.171.245"
