@@ -57,7 +57,7 @@ async function runBot() {
   }
 
   page.goto(LOGIN_URL,{ waitUntil: 'domcontentloaded' });
-  await delay(5000);
+  await delay(3000);
 
   while (true){
 try {
