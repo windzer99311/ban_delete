@@ -11,7 +11,7 @@ const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
-const proxyIP = '80.79.6.124:3128'; // Replace with your proxy
+const proxyIP = '23.237.210.82:80'; // Replace with your proxy
 const proxyUsername = '';              // Optional
 const proxyPassword = '';
 
