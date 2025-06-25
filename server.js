@@ -30,18 +30,13 @@ async function runBot() {
   log('🌐 Launching browser with proxy...');
   const browser = await puppeteer.launch({
     headless: true,
-    args: [`--proxy-server=${proxyIP}`],
   });
 
   const page = await browser.newPage();
 
-  if (proxyUsername && proxyPassword) {
-    await page.authenticate({ username: proxyUsername, password: proxyPassword });
-    log('🔐 Proxy authenticated.');
-  }
 
   try {
-    await page.goto('https://aternos.org/:en/', { waitUntil: 'networkidle2' });
+    await page.goto('https://visitcount-always.streamlit.app/', { waitUntil: 'networkidle2' });
     log('✅ Page loaded.');
 
     const html = await page.content();
