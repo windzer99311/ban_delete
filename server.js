@@ -46,7 +46,7 @@ async function runBot() {
   }
 
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.goto('https://aternos.org', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aternos.org', { waitUntil: 'networkidle2' });
   for (const cookie of cookies) {
     try {
       await page.setCookie(cookie);
@@ -55,7 +55,7 @@ async function runBot() {
     }
   }
 
-  await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
   await delay(5000);
 
   try {
@@ -67,7 +67,7 @@ async function runBot() {
 
     while (true) {
       await delay(1000);
-      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+      await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
 
       // ✅ FIXED SELECTOR HERE
       const buttons = await page.$$('button.js-remove');
