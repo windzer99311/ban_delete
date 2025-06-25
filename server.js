@@ -9,7 +9,7 @@ const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
 const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
-const LOOP_DELAY = 10000;
+const LOOP_DELAY = 1000;
 
 const proxyIP = '159.89.245.69:53971'; // Replace with your proxy
 const proxyUsername = '';              // Optional
