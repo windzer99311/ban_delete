@@ -1,13 +1,9 @@
-const puppeteer = require('puppeteer');
-const puppeteerExtra = require('puppeteer-extra');
-puppeteerExtra.puppeteer = puppeteer; // 🔧 Force puppeteer-extra to use puppeteer
-
+const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 
-puppeteerExtra.use(StealthPlugin());
+puppeteer.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
@@ -15,12 +11,11 @@ const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
-// Proxy settings
-const PROXY = '192.81.129.252:3135'; // Replace with your proxy IP:port
-const PROXY_USERNAME = '';           // Optional
-const PROXY_PASSWORD = '';           // Optional
+const proxyIP = '80.79.6.124:3128'; // Replace with your proxy
+const proxyUsername = '';              // Optional
+const proxyPassword = '';
 
-// --- Log function
+
 function log(message) {
   const timestamp = new Date().toISOString();
   const msg = `${timestamp} — ${message}`;
@@ -28,34 +23,26 @@ function log(message) {
   fs.appendFileSync(LOG_FILE, msg + '\n');
 }
 
-// --- Delay helper
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// --- Puppeteer bot
 async function runBot() {
   if (!fs.existsSync(COOKIE_FILE)) {
     log("❌ No cookies found. Please run save_session.js first.");
     return;
   }
 
-  const browser = await puppeteerExtra.launch({
+  const browser = await puppeteer.launch({
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      `--proxy-server=${PROXY}`
-    ]
+    args: ['--no-sandbox', '--disable-setuid-sandbox',`--proxy-server=${proxyIP}`]
   });
 
   const page = await browser.newPage();
 
-  if (PROXY_USERNAME && PROXY_PASSWORD) {
-    await page.authenticate({
-      username: PROXY_USERNAME,
-      password: PROXY_PASSWORD
-    });
+  if (proxyUsername && proxyPassword) {
+  await page.authenticate({ username: proxyUsername, password: proxyPassword });
+  log('🔐 Proxy authenticated.');
   }
 
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
@@ -74,7 +61,7 @@ async function runBot() {
   try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
     const selector = `div.servercard.offline[title="${PLAYER_NAME}"]`;
-    await page.waitForSelector(selector, { timeout: 60000 });
+    await page.waitForSelector(selector, { timeout: 15000 });
     await page.click(selector);
     log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
 
@@ -82,7 +69,8 @@ async function runBot() {
       await delay(1000);
       await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
 
-      const buttons = await page.$$('div.js-remove-from-list');
+      // ✅ FIXED SELECTOR HERE
+      const buttons = await page.$$('button.js-remove');
 
       if (buttons.length === 0) {
         log("✅ No delete buttons found.");
@@ -150,9 +138,7 @@ app.get('/logs', (req, res) => {
   });
 });
 
-// Start GUI and bot
 app.listen(PORT, () => {
   console.log(`🌐 GUI running: http://localhost:${PORT}`);
-  runBot(); // start the bot after server
+  runBot();
 });
-
