@@ -56,12 +56,14 @@ async function runBot() {
     }
   }
 
-  page.goto(LOGIN_URL);
+  page.goto(LOGIN_URL,{ waitUntil: 'domcontentloaded' });
+  await delay(5000);
+
   while (true){
-  try {
+try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
     const selector = `[title="${PLAYER_NAME}"]`;
-    await page.waitForSelector(selector, { timeout: 15000 });
+     page.waitForSelector(selector, { timeout: 15000 });
     await page.click(selector);
     log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
 
@@ -92,7 +94,7 @@ async function runBot() {
     }
 
   } catch (err) {
-    log('trying in error cath method!');
+    log('trying in error cath method!,the error: &{err}');
     while (true) {
       await delay(1000);
       await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
