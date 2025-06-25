@@ -47,7 +47,7 @@ async function runBot() {
   }
 
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.goto('https://aternos.org/players/banned-players', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aternos.org/players/banned-players');
   for (const cookie of cookies) {
     try {
       await page.setCookie(cookie);
@@ -56,8 +56,7 @@ async function runBot() {
     }
   }
 
-  await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-  await delay(5000);
+  page.goto(LOGIN_URL);
   while (true){
   try {
     log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
