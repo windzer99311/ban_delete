@@ -2,16 +2,14 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 
 puppeteer.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
 const LOGIN_URL = 'https://aternos.org/players/banned-players';
+const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
-
-let latestHTML = 'Loading...';
 
 function log(message) {
   const timestamp = new Date().toISOString();
@@ -20,9 +18,11 @@ function log(message) {
   fs.appendFileSync(LOG_FILE, msg + '\n');
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
 }
+
+let latestHTML = 'Not loaded yet.';
 
 async function runBot() {
   if (!fs.existsSync(COOKIE_FILE)) {
@@ -31,61 +31,54 @@ async function runBot() {
   }
 
   const browser = await puppeteer.launch({
-    headless: false, // ⚠️ Headed avoids headless detection
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
       '--disable-dev-shm-usage',
       '--window-size=1280,800',
+      '--disable-gpu',
       '--disable-infobars'
     ]
   });
 
   const page = await browser.newPage();
 
-  // 🛡️ Set stealth headers + navigator evasion
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => false });
-    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-    Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
-    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
-    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 });
-    window.chrome = { runtime: {} };
-  });
-
-  // 🧠 Set user-agent and viewport
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
-  await page.setViewport({ width: 1280, height: 800 });
-
-  // 🧱 Optional: block heavy resources for performance
+  // Intercept requests to block unnecessary resources
   await page.setRequestInterception(true);
   page.on('request', req => {
     const type = req.resourceType();
-    if (['image', 'stylesheet', 'font'].includes(type)) req.abort();
-    else req.continue();
+    if (['stylesheet', 'font', 'image'].includes(type)) {
+      req.abort();
+    } else {
+      req.continue();
+    }
   });
 
-  // 🍪 Load cookies
+  // Set cookies
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
   await page.setCookie(...cookies);
 
-  // 🔁 Loop to refresh banned page HTML
   while (true) {
     try {
-      log(`🌐 Loading banned players page...`);
+      log(`⏳ Navigating to page...`);
       await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+
+      log(`✅ Page loaded. Capturing HTML...`);
       latestHTML = await page.content();
-      log(`✅ HTML captured successfully.`);
+
+      log(`⏳ Waiting ${LOOP_DELAY / 1000}s before next refresh...`);
+      await delay(LOOP_DELAY);
+
     } catch (err) {
       log(`❌ Error: ${err.message}`);
+      await delay(5000);
     }
-
-    await delay(LOOP_DELAY);
   }
 }
 
-// --- GUI server ---
+// --- GUI Server ---
 const app = express();
 const PORT = 3000;
 
@@ -94,28 +87,50 @@ app.get('/', (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Aternos Live HTML</title>
+  <title>Log Viewer</title>
   <style>
-    body { background: #111; color: #eee; font-family: monospace; padding: 1rem; }
-    iframe { width: 100%; height: 90vh; border: none; background: #fff; }
+    body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
     h1 { color: #58a6ff; }
+    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 60vh; overflow-y: auto; }
+    textarea { width: 100%; height: 400px; background: #000; color: #0f0; font-family: monospace; }
   </style>
 </head>
 <body>
-  <h1>📄 Aternos Live HTML Viewer</h1>
-  <iframe src="/html" id="viewer"></iframe>
+  <h1>📝 Ban Deleter Logs</h1>
+  <pre id="logs">Loading...</pre>
+
+  <h2>📄 Page HTML Snapshot</h2>
+  <textarea id="html">Loading...</textarea>
+
   <script>
-    setInterval(() => {
-      document.getElementById("viewer").src = "/html?tick=" + Date.now();
-    }, 10000);
+    async function fetchLogs() {
+      const res = await fetch('/logs');
+      const text = await res.text();
+      document.getElementById('logs').textContent = text;
+    }
+    async function fetchHTML() {
+      const res = await fetch('/html');
+      const text = await res.text();
+      document.getElementById('html').value = text;
+    }
+    fetchLogs(); fetchHTML();
+    setInterval(fetchLogs, 2000);
+    setInterval(fetchHTML, 5000);
   </script>
 </body>
 </html>
   `);
 });
 
+app.get('/logs', (req, res) => {
+  fs.readFile(LOG_FILE, 'utf-8', (err, data) => {
+    if (err) return res.send('Error reading log.');
+    res.send(data);
+  });
+});
+
 app.get('/html', (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
+  res.set('Content-Type', 'text/html');
   res.send(latestHTML);
 });
 
