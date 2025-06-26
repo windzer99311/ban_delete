@@ -9,12 +9,11 @@ const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
 const LOGIN_URL = 'https://aternos.org/players/banned-players';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
-const LOOP_DELAY = 1000;
+const LOOP_DELAY = 10000;
 
-const proxyIP = '159.89.245.69:53971'; // Replace with your proxy
-const proxyUsername = '';              // Optional
+const proxyIP = '159.89.245.69:53971';
+const proxyUsername = '';
 const proxyPassword = '';
-
 
 function log(message) {
   const timestamp = new Date().toISOString();
@@ -35,93 +34,84 @@ async function runBot() {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox',`--proxy-server=${proxyIP}`
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-infobars',
+      '--window-size=1200,800',
+      `--proxy-server=${proxyIP}`
     ]
   });
 
+  const pages = await browser.pages();
+  if (pages.length > 0) await pages[0].close();
+
   const page = await browser.newPage();
 
+  // ✅ Dynamic image blocking
+  let allowImages = false;
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    const type = req.resourceType();
+    if (!allowImages && ['image', 'stylesheet', 'font'].includes(type)) {
+      req.abort();
+    } else {
+      req.continue();
+    }
+  });
+
   if (proxyUsername && proxyPassword) {
-  await page.authenticate({ username: proxyUsername, password: proxyPassword });
-  log('🔐 Proxy authenticated.');
+    await page.authenticate({ username: proxyUsername, password: proxyPassword });
+    log('🔐 Proxy authenticated.');
   }
 
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.goto('https://aternos.org/players/banned-players');
-  for (const cookie of cookies) {
+  await page.setCookie(...cookies);
+
+  page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' }); // fast, no await
+
+  while (true) {
     try {
-      await page.setCookie(cookie);
-    } catch (e) {
-      log(`⚠️ Failed to set cookie: ${e.message}`);
+      log(`⏳ Checking '${PLAYER_NAME}'...`);
+      const selector = `[title="${PLAYER_NAME}"]`;
+
+      await page.waitForSelector(selector, { timeout: 10000, visible: true });
+      await page.click(selector);
+      log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
+
+      allowImages = true; // ✅ Enable images only after server card click
+
+      while (true) {
+        await delay(500);
+        await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' }); // no await
+
+        const buttons = await page.$$('button.js-remove');
+        if (buttons.length === 0) {
+          log("✅ No delete buttons found.");
+        } else {
+          log(`🔘 Found ${buttons.length} delete button(s)...`);
+          for (const btn of buttons) {
+            try {
+              await btn.click();
+              log("🗑️ Clicked one delete button.");
+              await delay(300);
+            } catch (e) {
+              log(`⚠️ Skip a button: ${e.message}`);
+            }
+          }
+        }
+
+        log(`⏳ Waiting ${LOOP_DELAY / 1000}s before next check...`);
+        await delay(LOOP_DELAY);
+      }
+
+    } catch (err) {
+      log(`❌ Error: ${err.message}`);
+      await delay(1000);
     }
   }
-
-  page.goto(LOGIN_URL,{ waitUntil: 'domcontentloaded' });
-  await delay(3000);
-
-  while (true){
-try {
-    log(`⏳ Waiting for server card '${PLAYER_NAME}'...`);
-    const selector = `[title="${PLAYER_NAME}"]`;
-     page.waitForSelector(selector, { timeout: 15000 });
-    await page.click(selector);
-    log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
-
-    while (true) {
-      await delay(1000);
-      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-
-      // ✅ FIXED SELECTOR HERE
-      const buttons = await page.$$('button.js-remove');
-
-      if (buttons.length === 0) {
-        log("✅ No delete buttons found.");
-      } else {
-        log(`🔘 Found ${buttons.length} delete button(s)...`);
-        for (const btn of buttons) {
-          try {
-            await btn.click();
-            log("🗑️ Clicked one delete button.");
-            await delay(1000);
-          } catch (e) {
-            log(`⚠️ Skip a button: ${e.message}`);
-          }
-        }
-      }
-
-      log(`⏳ Waiting ${LOOP_DELAY / 1000} seconds before next check...`);
-      await delay(LOOP_DELAY);
-    }
-
-  } catch (err) {
-    log('trying in error cath method!,the error: &{err}');
-    while (true) {
-      await delay(1000);
-      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-
-      // ✅ FIXED SELECTOR HERE
-      const buttons = await page.$$('button.js-remove');
-
-      if (buttons.length === 0) {
-        log("✅ No delete buttons found.");
-      } else {
-        log(`🔘 Found ${buttons.length} delete button(s)...`);
-        for (const btn of buttons) {
-          try {
-            await btn.click();
-            log("🗑️ Clicked one delete button.");
-            await delay(1000);
-          } catch (e) {
-            log(`⚠️ Skip a button: ${e.message}`);
-          }
-        }
-      }
-
-      log(`⏳ Waiting ${LOOP_DELAY / 1000} seconds before next check...`);
-      await delay(LOOP_DELAY);
-    }
-
-  }}
 
   await browser.close();
 }
