@@ -18,9 +18,11 @@ function log(message) {
   fs.appendFileSync(LOG_FILE, msg + '\n');
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
 }
+
+let latestHTML = 'Not loaded yet.';
 
 async function runBot() {
   if (!fs.existsSync(COOKIE_FILE)) {
@@ -29,80 +31,54 @@ async function runBot() {
   }
 
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
       '--disable-dev-shm-usage',
+      '--window-size=1280,800',
       '--disable-gpu',
-      '--disable-infobars',
-      '--window-size=1200,800'
+      '--disable-infobars'
     ]
   });
 
-  const pages = await browser.pages();
-  if (pages.length > 0) await pages[0].close();
-
   const page = await browser.newPage();
 
+  // Intercept requests to block unnecessary resources
   await page.setRequestInterception(true);
-  page.on('request', (req) => {
+  page.on('request', req => {
     const type = req.resourceType();
-    if (['stylesheet', 'font'].includes(type)) {
+    if (['stylesheet', 'font', 'image'].includes(type)) {
       req.abort();
     } else {
       req.continue();
     }
   });
 
+  // Set cookies
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
   await page.setCookie(...cookies);
 
-  await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-
   while (true) {
     try {
-      log(`⏳ Checking '${PLAYER_NAME}'...`);
-      const selector = `[title="${PLAYER_NAME}"]`;
+      log(`⏳ Navigating to page...`);
+      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForSelector(selector, { timeout: 10000, visible: true });
-      await page.click(selector);
-      log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
+      log(`✅ Page loaded. Capturing HTML...`);
+      latestHTML = await page.content();
 
-      while (true) {
-        await delay(500);
-        await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-
-        const buttons = await page.$$('button.js-remove');
-        if (buttons.length === 0) {
-          log("✅ No delete buttons found.");
-        } else {
-          log(`🔘 Found ${buttons.length} delete button(s)...`);
-          for (const btn of buttons) {
-            try {
-              await btn.click();
-              log("🗑️ Clicked one delete button.");
-              await delay(300);
-            } catch (e) {
-              log(`⚠️ Skip a button: ${e.message}`);
-            }
-          }
-        }
-
-        log(`⏳ Waiting ${LOOP_DELAY / 1000}s before next check...`);
-        await delay(LOOP_DELAY);
-      }
+      log(`⏳ Waiting ${LOOP_DELAY / 1000}s before next refresh...`);
+      await delay(LOOP_DELAY);
 
     } catch (err) {
       log(`❌ Error: ${err.message}`);
-      await delay(1000);
+      await delay(5000);
     }
   }
-
-  await browser.close();
 }
 
-// --- GUI server
+// --- GUI Server ---
 const app = express();
 const PORT = 3000;
 
@@ -115,20 +91,31 @@ app.get('/', (req, res) => {
   <style>
     body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
     h1 { color: #58a6ff; }
-    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
+    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 60vh; overflow-y: auto; }
+    textarea { width: 100%; height: 400px; background: #000; color: #0f0; font-family: monospace; }
   </style>
 </head>
 <body>
   <h1>📝 Ban Deleter Logs</h1>
   <pre id="logs">Loading...</pre>
+
+  <h2>📄 Page HTML Snapshot</h2>
+  <textarea id="html">Loading...</textarea>
+
   <script>
     async function fetchLogs() {
       const res = await fetch('/logs');
       const text = await res.text();
       document.getElementById('logs').textContent = text;
     }
-    fetchLogs();
+    async function fetchHTML() {
+      const res = await fetch('/html');
+      const text = await res.text();
+      document.getElementById('html').value = text;
+    }
+    fetchLogs(); fetchHTML();
     setInterval(fetchLogs, 2000);
+    setInterval(fetchHTML, 5000);
   </script>
 </body>
 </html>
@@ -142,7 +129,12 @@ app.get('/logs', (req, res) => {
   });
 });
 
+app.get('/html', (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.send(latestHTML);
+});
+
 app.listen(PORT, () => {
-  console.log(`🌐 GUI running: http://localhost:${PORT}`);
+  console.log(`🌐 GUI running at http://localhost:${PORT}`);
   runBot();
 });
