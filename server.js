@@ -7,7 +7,7 @@ puppeteer.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
-const LOGIN_URL = 'https://aternos.org/players/banned-players';
+const LOGIN_URL = 'https://www.urban-vpn.com/free-products/free-browser-extension/';
 const PLAYER_NAME = 'KARBAN2923-JmVS';
 const LOOP_DELAY = 10000;
 
