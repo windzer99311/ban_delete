@@ -1,7 +1,9 @@
-// Undetectable Aternos bot using Playwright
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const express = require('express');
 const fs = require('fs');
-const { chromium } = require('playwright');
+
+puppeteer.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
 const LOG_FILE = 'log.txt';
@@ -26,36 +28,52 @@ async function runBot() {
     return;
   }
 
-  const browser = await chromium.launch({
-    headless: false,
-    args: ['--disable-blink-features=AutomationControlled']
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-infobars',
+      '--window-size=1200,800'
+    ]
   });
 
-  const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)...',
-    viewport: { width: 1280, height: 800 },
-    locale: 'en-US'
+  const pages = await browser.pages();
+  if (pages.length > 0) await pages[0].close();
+
+  const page = await browser.newPage();
+
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    const type = req.resourceType();
+    if (['stylesheet', 'font'].includes(type)) {
+      req.abort();
+    } else {
+      req.continue();
+    }
   });
 
-  const page = await context.newPage();
   const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await context.addCookies(cookies);
+  await page.setCookie(...cookies);
 
-  await page.goto(LOGIN_URL);
+  await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
 
   while (true) {
     try {
       log(`⏳ Checking '${PLAYER_NAME}'...`);
       const selector = `[title="${PLAYER_NAME}"]`;
-      await page.waitForSelector(selector, { timeout: 10000 });
+
+      await page.waitForSelector(selector, { timeout: 10000, visible: true });
       await page.click(selector);
       log(`✅ Clicked server card for '${PLAYER_NAME}'.`);
 
       while (true) {
         await delay(500);
-        await page.reload();
-        const buttons = await page.$$('button.js-remove');
+        await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
 
+        const buttons = await page.$$('button.js-remove');
         if (buttons.length === 0) {
           log("✅ No delete buttons found.");
         } else {
@@ -80,6 +98,8 @@ async function runBot() {
       await delay(1000);
     }
   }
+
+  await browser.close();
 }
 
 // --- GUI server
