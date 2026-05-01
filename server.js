@@ -1,140 +1,104 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const express = require('express');
 const fs = require('fs');
 
 puppeteer.use(StealthPlugin());
 
 const COOKIE_FILE = 'cookies.json';
-const LOG_FILE = 'log.txt';
-const LOGIN_URL = 'https://www.urban-vpn.com/free-products/free-browser-extension/';
-const PLAYER_NAME = 'KARBAN2923-JmVS';
-const LOOP_DELAY = 10000;
+const SERVER_NAME = 'meracraft-ox3w';
 
-function log(message) {
-  const timestamp = new Date().toISOString();
-  const msg = `${timestamp} — ${message}`;
-  console.log(msg);
-  fs.appendFileSync(LOG_FILE, msg + '\n');
-}
-
-async function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-
-let latestHTML = 'Not loaded yet.';
+// Helper function to replace the missing waitForTimeout
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runBot() {
-  if (!fs.existsSync(COOKIE_FILE)) {
-    log("❌ No cookies found. Please run save_session.js first.");
-    return;
-  }
-
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: "shell", // Stable headless mode
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--disable-dev-shm-usage',
-      '--window-size=1280,800',
-      '--disable-gpu',
-      '--disable-infobars'
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--window-size=1920,1080'
     ]
   });
 
   const page = await browser.newPage();
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-  // Intercept requests to block unnecessary resources
-  await page.setRequestInterception(true);
-  page.on('request', req => {
-    const type = req.resourceType();
-    if (['stylesheet', 'font', 'image'].includes(type)) {
-      req.abort();
-    } else {
-      req.continue();
-    }
-  });
+  try {
+    if (!fs.existsSync(COOKIE_FILE)) return console.log("❌ cookies.json missing!");
 
-  // Set cookies
-  const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
-  await page.setCookie(...cookies);
+    const cookies = JSON.parse(fs.readFileSync(COOKIE_FILE, 'utf-8'));
+    await page.setCookie(...cookies);
 
-  while (true) {
+    console.log("⏳ Loading server list...");
+    await page.goto('https://aternos.org/servers/', { waitUntil: 'networkidle2' });
+
+    console.log(`🔍 Looking for ${SERVER_NAME}...`);
+    const serverClicked = await page.evaluate((name) => {
+      const cards = Array.from(document.querySelectorAll('.server-name'));
+      const target = cards.find(c => c.textContent.trim().toLowerCase().includes(name.toLowerCase()));
+      if (target) {
+        target.closest('.server-body').click();
+        return true;
+      }
+      return false;
+    }, SERVER_NAME);
+
+    if (!serverClicked) return console.log("❌ Server card not found.");
+
+    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+    // Handle Adblock Screen if it exists
     try {
-      log(`⏳ Navigating to page...`);
-      await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+        const adblockBtn = await page.$('.btn.btn-main.btn-small');
+        if (adblockBtn) {
+            console.log("🛡️ Clearing Adblock screen...");
+            await page.evaluate(() => document.querySelector('.btn.btn-main.btn-small')?.click());
+            await delay(5000);
+        }
+    } catch (e) {}
 
-      log(`✅ Page loaded. Capturing HTML...`);
-      latestHTML = await page.content();
+    console.log("🔄 Entering Start Loop...");
+    let attempts = 0;
+    const maxAttempts = 30; // Increased attempts
 
-      log(`⏳ Waiting ${LOOP_DELAY / 1000}s before next refresh...`);
-      await delay(LOOP_DELAY);
+    while (attempts < maxAttempts) {
+        // Get the current status text from the dashboard
+        const status = await page.evaluate(() => {
+            const el = document.querySelector('.statuslabel-label-container');
+            return el ? el.innerText : "";
+        });
 
-    } catch (err) {
-      log(`❌ Error: ${err.message}`);
-      await delay(5000);
+        // Check if we hit the "Loading..." state from {B8537DC8-A55C-44AA-9D27-823305CFD079}.png
+        if (status.includes("Loading") || status.includes("Starting") || status.includes("Online")) {
+            console.log(`✨ Success! Server status is now: ${status}`);
+            break;
+        }
+
+        console.log(`🖱️ Attempt ${attempts + 1}: Status is "${status}". Clicking...`);
+
+        // Use evaluate to click the Start or Confirm button directly in the browser's context
+        await page.evaluate(() => {
+            const startBtn = document.querySelector('#start');
+            const confirmBtn = document.querySelector('.btn.btn-success');
+
+            // If the green "Accept/Confirm" button is there, click it first
+            if (confirmBtn && confirmBtn.offsetHeight > 0) {
+                confirmBtn.click();
+            } else if (startBtn) {
+                startBtn.click();
+            }
+        });
+
+        await delay(3000); // Wait 3 seconds before checking again
+        attempts++;
     }
+
+  } catch (err) {
+    console.error(`❌ Bot Error: ${err.message}`);
+  } finally {
+    console.log("🎉 Bot finished task.");
+    // browser.close();
   }
 }
 
-// --- GUI Server ---
-const app = express();
-const PORT = 3000;
-
-app.get('/', (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Log Viewer</title>
-  <style>
-    body { background: #1e1e2f; color: #eee; font-family: monospace; padding: 1rem; }
-    h1 { color: #58a6ff; }
-    pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 1rem; border-radius: 8px; max-height: 60vh; overflow-y: auto; }
-    textarea { width: 100%; height: 400px; background: #000; color: #0f0; font-family: monospace; }
-  </style>
-</head>
-<body>
-  <h1>📝 Ban Deleter Logs</h1>
-  <pre id="logs">Loading...</pre>
-
-  <h2>📄 Page HTML Snapshot</h2>
-  <textarea id="html">Loading...</textarea>
-
-  <script>
-    async function fetchLogs() {
-      const res = await fetch('/logs');
-      const text = await res.text();
-      document.getElementById('logs').textContent = text;
-    }
-    async function fetchHTML() {
-      const res = await fetch('/html');
-      const text = await res.text();
-      document.getElementById('html').value = text;
-    }
-    fetchLogs(); fetchHTML();
-    setInterval(fetchLogs, 2000);
-    setInterval(fetchHTML, 5000);
-  </script>
-</body>
-</html>
-  `);
-});
-
-app.get('/logs', (req, res) => {
-  fs.readFile(LOG_FILE, 'utf-8', (err, data) => {
-    if (err) return res.send('Error reading log.');
-    res.send(data);
-  });
-});
-
-app.get('/html', (req, res) => {
-  res.set('Content-Type', 'text/html');
-  res.send(latestHTML);
-});
-
-app.listen(PORT, () => {
-  console.log(`🌐 GUI running at http://localhost:${PORT}`);
-  runBot();
-});
+runBot();
